@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>굿즈샵 — 로그인 / 회원가입</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div id="header"></div>
+
+<main class="container">
+  <div class="card" style="max-width:420px;margin:32px auto">
+
+    <div class="tabs">
+      <button type="button" id="tab-login" class="active">로그인</button>
+      <button type="button" id="tab-signup">회원가입</button>
+    </div>
+
+    <div id="message"></div>
+
+    <form id="auth-form">
+      <div class="form-row">
+        <label for="email">이메일</label>
+        <input type="email" id="email" required autocomplete="email"
+               placeholder="you@example.com">
+      </div>
+
+      <div class="form-row">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" required minlength="6"
+               autocomplete="current-password" placeholder="6자 이상">
+        <div class="form-hint" id="password-hint"></div>
+      </div>
+
+      <button type="submit" class="btn btn-block btn-lg" id="submit-btn">로그인</button>
+    </form>
+
+    <div class="form-hint" style="margin-top:18px;text-align:center">
+      학습용 데모입니다. 실제로 쓰는 이메일·비밀번호는 넣지 마세요.
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { supabase, escapeHtml } from './assets/js/supabase.js';
+import { renderHeader } from './assets/js/auth.js';
+
+renderHeader('login.html');
+
+const form       = document.getElementById('auth-form');
+const emailInput = document.getElementById('email');
+const pwInput    = document.getElementById('password');
+const pwHint     = document.getElementById('password-hint');
+const submitBtn  = document.getElementById('submit-btn');
+const message    = document.getElementById('message');
+const tabLogin   = document.getElementById('tab-login');
+const tabSignup  = document.getElementById('tab-signup');
+
+// 로그인 후 돌아갈 페이지 (예: login.html?next=checkout.html%3Fproduct%3D2)
+const nextPage = new URLSearchParams(location.search).get('next') || 'index.html';
+
+let mode = 'login';   // 'login' 또는 'signup'
+
+tabLogin.addEventListener('click', () => setMode('login'));
+tabSignup.addEventListener('click', () => setMode('signup'));
+
+function setMode(next) {
+  mode = next;
+  tabLogin.classList.toggle('active', mode === 'login');
+  tabSignup.classList.toggle('active', mode === 'signup');
+  submitBtn.textContent = mode === 'login' ? '로그인' : '회원가입';
+  pwInput.autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+  pwHint.textContent = mode === 'signup' ? '6자 이상 입력해 주세요.' : '';
+  message.innerHTML = '';
+}
+
+function showMessage(text, type = 'error') {
+  message.innerHTML = `<div class="alert alert-${type}">${escapeHtml(text)}</div>`;
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  submitBtn.disabled = true;
+  submitBtn.textContent = '처리 중…';
+  message.innerHTML = '';
+
+  const email = emailInput.value.trim();
+  const password = pwInput.value;
+
+  try {
+    if (mode === 'signup') {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+
+      // 이메일 인증이 꺼져 있으면 가입 즉시 세션이 생겨 바로 로그인 상태가 됩니다.
+      if (!data.session) {
+        showMessage(
+          '가입은 됐지만 자동 로그인되지 않았습니다. ' +
+          'Supabase의 "Confirm email" 설정이 켜져 있는지 확인해 주세요.',
+          'warning'
+        );
+        return;
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+
+    window.location.replace(nextPage);
+  } catch (err) {
+    showMessage(translateError(err.message));
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = mode === 'login' ? '로그인' : '회원가입';
+  }
+});
+
+// Supabase가 돌려주는 영어 에러를 알아보기 쉬운 한국어로 바꿔줍니다.
+function translateError(raw) {
+  const map = {
+    'Invalid login credentials': '이메일 또는 비밀번호가 맞지 않습니다.',
+    'User already registered': '이미 가입된 이메일입니다. 로그인 탭에서 로그인해 주세요.',
+    'Email not confirmed': '이메일 인증이 필요한 상태입니다. Supabase에서 "Confirm email"을 꺼주세요.',
+    'Password should be at least 6 characters': '비밀번호는 6자 이상이어야 합니다.',
+  };
+  for (const [en, ko] of Object.entries(map)) {
+    if (raw.includes(en)) return ko;
+  }
+  return raw;
+}
+
+// 이미 로그인돼 있으면 굳이 이 페이지에 머물 필요가 없습니다.
+const { data } = await supabase.auth.getSession();
+if (data.session) window.location.replace(nextPage);
+</script>
+
+</body>
+</html>

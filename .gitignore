@@ -1,0 +1,19 @@
+# 여기에 적힌 파일은 GitHub에 올라가지 않습니다.
+
+# 비밀 값이 담긴 로컬 메모 (토스 시크릿 키, DB 비밀번호 등)
+SECRETS.local.md
+.env
+.env.*
+!.env.example
+
+# Supabase CLI가 만드는 로컬 파일
+supabase/.temp/
+supabase/.branches/
+
+# 의존성 / 빌드 결과물
+node_modules/
+
+# 운영체제가 자동으로 만드는 잡파일
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,9 @@
+# Supabase CLI 설정
+# 이 프로젝트는 원격(클라우드) Supabase만 사용하고 로컬 실행은 하지 않습니다.
+# (로컬 실행에는 Docker가 필요한데 설치돼 있지 않습니다.)
+
+project_id = "goods-shop"
+
+[functions.confirm-payment]
+# 로그인한 사용자만 호출할 수 있게 토큰 검사를 켜둡니다.
+verify_jwt = true

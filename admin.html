@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>굿즈샵 — 관리자</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div id="header"></div>
+
+<main class="container">
+  <h1 class="page-title">전체 결제 내역</h1>
+  <p class="page-desc">모든 회원의 결제 내역입니다. 관리자만 볼 수 있습니다.</p>
+
+  <div id="content">
+    <div class="loading"><div class="spinner"></div>불러오는 중…</div>
+  </div>
+</main>
+
+<script type="module">
+import { supabase, formatWon, formatDate, escapeHtml } from './assets/js/supabase.js';
+import { renderHeader, requireAdmin } from './assets/js/auth.js';
+
+renderHeader('admin.html');
+
+const content = document.getElementById('content');
+
+// 화면 차단 (편의용). 진짜 차단은 데이터베이스 RLS가 합니다.
+const user = await requireAdmin();
+if (!user) throw new Error('not admin');
+
+// profiles(email) 부분이 "주문한 사람의 이메일도 같이 가져와줘" 라는 뜻입니다.
+// orders.user_id 가 profiles.id 를 가리키고 있어서 이렇게 한 번에 조회됩니다.
+const { data: orders, error } = await supabase
+  .from('orders')
+  .select(`
+    order_code, product_name, quantity, amount, status, method,
+    approved_at, created_at, fail_reason,
+    profiles ( email )
+  `)
+  .order('created_at', { ascending: false });
+
+if (error) {
+  content.innerHTML = `<div class="alert alert-error">${escapeHtml(error.message)}</div>`;
+} else if (!orders.length) {
+  content.innerHTML = `
+    <div class="empty">
+      <span class="emoji">📭</span>
+      아직 아무도 결제하지 않았습니다.
+    </div>`;
+} else {
+  const paid     = orders.filter((o) => o.status === 'DONE');
+  const revenue  = paid.reduce((sum, o) => sum + o.amount, 0);
+  const buyers   = new Set(paid.map((o) => o.profiles?.email)).size;
+
+  content.innerHTML = `
+    <div class="card" style="margin-bottom:20px;display:flex;gap:40px;flex-wrap:wrap">
+      ${stat('총 주문', orders.length + '건')}
+      ${stat('결제 완료', paid.length + '건')}
+      ${stat('구매자 수', buyers + '명')}
+      ${stat('총 매출', formatWon(revenue), true)}
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>주문일시</th>
+            <th>구매자</th>
+            <th>상품</th>
+            <th class="num">수량</th>
+            <th class="num">금액</th>
+            <th>결제수단</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(renderRow).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function stat(label, value, highlight = false) {
+  return `
+    <div>
+      <div style="font-size:13px;color:var(--text-muted)">${label}</div>
+      <div style="font-size:22px;font-weight:800;${highlight ? 'color:var(--primary)' : ''}">${value}</div>
+    </div>`;
+}
+
+function renderRow(o) {
+  return `
+    <tr>
+      <td>${formatDate(o.created_at)}</td>
+      <td>${escapeHtml(o.profiles?.email ?? '알 수 없음')}</td>
+      <td>
+        ${escapeHtml(o.product_name)}
+        <div style="font-size:11px;color:var(--text-muted)">${escapeHtml(o.order_code)}</div>
+      </td>
+      <td class="num">${o.quantity}</td>
+      <td class="num">${formatWon(o.amount)}</td>
+      <td>${escapeHtml(o.method ?? '-')}</td>
+      <td>
+        <span class="badge badge-${o.status}">${statusLabel(o.status)}</span>
+        ${o.status === 'FAILED' && o.fail_reason
+          ? `<div style="font-size:11px;color:var(--danger);margin-top:3px">${escapeHtml(o.fail_reason)}</div>`
+          : ''}
+      </td>
+    </tr>`;
+}
+
+function statusLabel(status) {
+  return {
+    DONE: '결제완료',
+    PENDING: '결제대기',
+    FAILED: '실패',
+    CANCELED: '취소됨',
+  }[status] ?? status;
+}
+</script>
+
+</body>
+</html>

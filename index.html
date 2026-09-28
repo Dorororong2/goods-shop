@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>굿즈샵 — 상품 목록</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div id="header"></div>
+
+<main class="container">
+  <h1 class="page-title">굿즈 목록</h1>
+  <p class="page-desc">마음에 드는 굿즈를 골라보세요.</p>
+
+  <div id="content">
+    <div class="loading"><div class="spinner"></div>상품을 불러오는 중…</div>
+  </div>
+</main>
+
+<script type="module">
+import { supabase, formatWon, escapeHtml } from './assets/js/supabase.js';
+import { renderHeader } from './assets/js/auth.js';
+
+renderHeader('index.html');
+
+const content = document.getElementById('content');
+
+const { data: products, error } = await supabase
+  .from('products')
+  .select('id, name, description, price, emoji, color, stock')
+  .order('id');
+
+if (error) {
+  content.innerHTML = `
+    <div class="alert alert-error">
+      상품을 불러오지 못했습니다: ${escapeHtml(error.message)}
+      <div class="form-hint">데이터베이스 설정(SQL 실행)이 끝났는지 확인해 주세요.</div>
+    </div>`;
+} else if (!products || products.length === 0) {
+  content.innerHTML = `
+    <div class="empty">
+      <span class="emoji">📦</span>
+      아직 등록된 상품이 없습니다.
+    </div>`;
+} else {
+  content.innerHTML = `
+    <div class="product-grid">
+      ${products.map(renderCard).join('')}
+    </div>`;
+}
+
+function renderCard(p) {
+  const soldOut = p.stock <= 0;
+  return `
+    <article class="product-card">
+      <div class="product-thumb" style="background:${escapeHtml(p.color)}20">
+        ${escapeHtml(p.emoji)}
+      </div>
+      <div class="product-body">
+        <div class="product-name">${escapeHtml(p.name)}</div>
+        <div class="product-desc">${escapeHtml(p.description)}</div>
+        <div class="product-price">${formatWon(p.price)}</div>
+        <div class="product-stock">${soldOut ? '품절' : `재고 ${p.stock}개`}</div>
+        ${soldOut
+          ? `<button class="btn btn-block" disabled>품절</button>`
+          : `<a class="btn btn-block" href="checkout.html?product=${p.id}">구매하기</a>`}
+      </div>
+    </article>`;
+}
+</script>
+
+</body>
+</html>
