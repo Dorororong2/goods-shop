@@ -145,3 +145,4 @@ supabase functions deploy confirm-payment --use-api
 | 결제창이 안 뜸 | `config.js` 의 토스 클라이언트 키가 비어 있거나 `test_gck_` 로 시작하지 않음 |
 | 승인 단계에서 실패 | Supabase Secrets에 `TOSS_SECRET_KEY` 가 등록됐는지 확인 |
 | 관리자인데 전체가 안 보임 | `profiles` 테이블의 해당 계정 `role` 이 `admin` 인지 확인 |
+| GitHub Pages 빌드 실패 | 루트의 `.nojekyll` 파일을 지우지 마세요. 이 파일이 없으면 GitHub가 Jekyll로 사이트를 다시 만들려다 실패합니다 |
