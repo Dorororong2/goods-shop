@@ -17,6 +17,22 @@
 
 ---
 
+## 배포된 주소
+
+- **사이트**: https://dorororong2.github.io/goods-shop/
+- **저장소**: https://github.com/Dorororong2/goods-shop
+- **Supabase 프로젝트**: `upvbubocwnmjfoqyucfk` (서울 리전)
+
+## 테스트 계정
+
+| 계정 | 비밀번호 | 역할 |
+|---|---|---|
+| `admin@admin.com` | `superadmin` | 관리자 (전체 결제 내역 열람) |
+| `test@test.com` | `test1234` | 일반 사용자 |
+
+관리자 권한은 가입 트리거가 자동으로 부여합니다.
+`admin@admin.com` 으로 가입하면 `profiles.role` 이 `admin` 이 됩니다.
+
 ## 기술 스택
 
 | 영역 | 사용 기술 | 이유 |
